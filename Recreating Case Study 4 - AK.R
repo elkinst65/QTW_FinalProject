@@ -27,23 +27,36 @@ library(ggplot2)
 # 'FB', 'NFLX', 'TWTR', 'AMZN', 'NVDA'
 # How to get the ticker data. We will be focusing on the date range 1/1/2016 - 5/1/2017
 # Set variables to the csv's
+Dates <- as.Date(fb$Date)
 fb <- read.csv("data/FB.csv")
+fbc <- fb$Close
+
 nflx <- read.csv("data/NFLX.csv")
+nflxc <- nflx$Close
+
 twtr <- read.csv("data/TWTR.csv")
+twtrc <- twtr$Close
+
 amzn <- read.csv("data/AMZN.csv")
+amznc <- amzn$Close
+
 nvda <- read.csv("data/NVDA.CSV")
+nvdac <- nvda$Close
 
 # Let's start with one stock at a time
-fb$Date <- as.Date(fb$Date)
+Dates <- as.Date(fb$Date)
 
-ggplot(fb, aes(fb$Date, fb$Close)) +
-  geom_line(aes(color="fb")) +
-  labs(color="Legend") +
-  scale_color_manual("", breaks = c("fb"),
-                     values = c("blue")) +
-  ggtitle("Daily Closing Stock Prices: Facebook") +
-  theme(plot.title = element_text(lineheight = .7, face = "bold"))
+df <- data.frame(Dates, fbc, nflxc, twtrc, amznc, nvdac)
 
+# This is just plotting the raw data
+ggplot(df, aes(Dates)) +
+  geom_line(aes(y=fbc, color = "fb")) +
+  geom_line(aes(y=nflxc, color = "nflx")) +
+  geom_line(aes(y=twtrc, color = "twtr")) +
+  geom_line(aes(y=amznc, color = "amzn")) +
+  geom_line(aes(y=nvdac, color = "nvda")) +
+  scale_color_manual("", 
+                      breaks = c("fb", "nflx", "twtr", "amzn", "nvda"),
+                      values = c("green","orange","purple", "blue","red")) # These go top to bottom. 
 
-
-
+#
