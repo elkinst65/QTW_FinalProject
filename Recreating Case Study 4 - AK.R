@@ -91,9 +91,11 @@ ggplot(dfr, aes(retDate)) +
   geom_line(aes(y=nvdar, color = "nvda")) +
   scale_color_manual("", 
                      breaks = c("fb", "nflx", "twtr", "amzn", "nvda"),
-                     values = c("green","orange","purple", "blue","red")) +# These go top to bottom.
+                     values = c("orange", "blue","green","red","purple")) +# These go top to bottom.
   ggtitle("Returns by Day") + 
   theme(plot.title = element_text(lineheight=.7, face="bold")) +
   xlab("Date") +
   ylab("")
 
+# Time to work on the Sharpe Ratio
+SharpeRatio(fbr, Rf=0.95)
