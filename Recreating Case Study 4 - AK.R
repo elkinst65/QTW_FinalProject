@@ -25,8 +25,7 @@ library(ggplot2)
 
 
 # 'FB', 'NFLX', 'TWTR', 'AMZN', 'NVDA'
-# How to get the ticker data. We will be focusing on the date range 1/1/2016 - 5/1/2017
-# Set variables to the csv's
+# Set variables to the csv's and single out Closing price
 Dates <- as.Date(fb$Date)
 fb <- read.csv("data/FB.csv")
 fbc <- fb$Close
@@ -42,8 +41,6 @@ amznc <- amzn$Close
 
 nvda <- read.csv("data/NVDA.CSV")
 nvdac <- nvda$Close
-
-Dates <- as.Date(fb$Date)
 
 df <- data.frame(Dates, fbc, nflxc, twtrc, amznc, nvdac)
 summary(df) # lookin' good
@@ -91,11 +88,12 @@ ggplot(dfr, aes(retDate)) +
   geom_line(aes(y=nvdar, color = "nvda")) +
   scale_color_manual("", 
                      breaks = c("fb", "nflx", "twtr", "amzn", "nvda"),
-                     values = c("orange", "blue","green","red","purple")) +# These go top to bottom.
+                     values = c("blue","orange", "green","red","purple")) +# These go top to bottom.
   ggtitle("Returns by Day") + 
   theme(plot.title = element_text(lineheight=.7, face="bold")) +
   xlab("Date") +
   ylab("")
 
 # Time to work on the Sharpe Ratio
-SharpeRatio(fbr, Rf=0.95)
+#PerformanceAnalytics Package has this built in. Not 100% sure on how to handle it.
+SharpeRatio(nflxr, Rf=0.95, scale = 252, VaR = 1)
