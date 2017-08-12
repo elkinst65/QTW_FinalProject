@@ -43,10 +43,10 @@ amznc <- amzn$Close
 nvda <- read.csv("data/NVDA.CSV")
 nvdac <- nvda$Close
 
-# Let's start with one stock at a time
 Dates <- as.Date(fb$Date)
 
 df <- data.frame(Dates, fbc, nflxc, twtrc, amznc, nvdac)
+summary(df) # lookin' good
 
 # This is just plotting the raw data
 ggplot(df, aes(Dates)) +
@@ -57,6 +57,43 @@ ggplot(df, aes(Dates)) +
   geom_line(aes(y=nvdac, color = "nvda")) +
   scale_color_manual("", 
                       breaks = c("fb", "nflx", "twtr", "amzn", "nvda"),
-                      values = c("green","orange","purple", "blue","red")) # These go top to bottom. 
+                      values = c("green","orange","purple", "blue","red")) +# These go top to bottom.
+  ggtitle("Raw Closing values by Day") + 
+  theme(plot.title = element_text(lineheight=.7, face="bold")) +
+  xlab("") +
+  ylab("Value in USD")
 
-#
+# Let's create a daily cumulative return function. 
+dailyRets <- function(stocks) {
+  prices <- stocks[,"Adj.Close", drop=FALSE]
+  n <- nrow(stocks)
+  returns <- ((prices[2:n,1] - prices[1:(n-1),1])/prices[1:(n-1),1]) # sbux_ret (from example)
+  gret <- 1 + returns
+  fv <- cumprod(gret) - 1
+  names(fv) <- stocks[2:n,1]
+  return(fv)
+}
+
+# Apply to all stocks
+fbr <- dailyRets(fb)
+nflxr <- dailyRets(nflx)
+twtrr <- dailyRets(twtr)
+amznr <- dailyRets(amzn)
+nvdar <- dailyRets(nvda)
+retDate <- Dates[2:len(Dates)]
+dfr <- data.frame(retDate, fbr, nflxr, twtrr, amznr, nvdar)
+
+ggplot(dfr, aes(retDate)) +
+  geom_line(aes(y=fbr, color = "fb")) +
+  geom_line(aes(y=nflxr, color = "nflx")) +
+  geom_line(aes(y=twtrr, color = "twtr")) +
+  geom_line(aes(y=amznr, color = "amzn")) +
+  geom_line(aes(y=nvdar, color = "nvda")) +
+  scale_color_manual("", 
+                     breaks = c("fb", "nflx", "twtr", "amzn", "nvda"),
+                     values = c("green","orange","purple", "blue","red")) +# These go top to bottom.
+  ggtitle("Returns by Day") + 
+  theme(plot.title = element_text(lineheight=.7, face="bold")) +
+  xlab("Date") +
+  ylab("")
+
