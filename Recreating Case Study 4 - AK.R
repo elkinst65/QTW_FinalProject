@@ -94,6 +94,62 @@ ggplot(dfr, aes(retDate)) +
   xlab("Date") +
   ylab("")
 
+
 # Time to work on the Sharpe Ratio
 #PerformanceAnalytics Package has this built in. Not 100% sure on how to handle it.
 SharpeRatio(nflxr, Rf=0.95, scale = 252, VaR = 1)
+
+SharpeRatio.annualized(fbr)
+x <- SharpeRatio(fbr, Rf = 0)
+x
+
+SharpeRatio(dfr[,2:6], Rf = dfr[,2,drop=FALSE]) # Still working with this one. Not sure where to take it.
+
+#
+# Everything below this line is a WIP. It may not be needed
+# 
+
+# Let's move onto how they do everything in Python for Data Analysis. (This is failing spectacularly)
+
+pctchange <- function(val){
+  return(val/lag(val,-1) - 1)
+}
+
+lag <- 1
+
+calc_mom <- function(price, lookback, lag){
+  mom_ret <- shift(price, n = 1)
+  mom_ret <- mom_ret.pctchange(lookback)
+  ranks <- mom_ret.rank(axis = 1, ascending = FALSE)
+  demeaned <- ranks.subtract(ranks.mean(axis = 1))
+  return(demeaned.divide(demeaned.std(axis=1), axis = 0))
+}
+
+compound <- function(x){
+  return(prod(1+x) - 1)
+}
+
+daily_sr <- function(x){
+  return(mean(x)/stdDev(x))
+}
+
+strat_sr <- function(prices, lb, hold){
+  # Compute the portfolio weights
+  freq <- as.integer("%d") %% hold
+  port <- calc_mom(prices, lb)
+  daily_rets <- pctchange(prices)
+  
+  # Compute the portfolio returns
+  port <- port.shift(1)
+  port <- port.resample(freq)
+  port <- first(port)
+  
+  returns <- daily_rets.resample(freq)
+  returns <- returns.apply(compound)
+  
+  port_rets <- sum(port * returns,axis=1)
+  
+  return(daily_sr(port_rets) * sqrt(252 / hold))
+}
+
+strat_sr(fbc, 70, 30)
