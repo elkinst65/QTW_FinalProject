@@ -1,27 +1,8 @@
-# Libraries needed:  for getting the ticker data.
-# frontier for the analysis,
-# Let's use Hexbin for the heatmap
 
-# Helpful sites:
-# https://flowingdata.com/2012/10/04/more-on-making-heat-maps-in-r/
-# http://blog.revolutionanalytics.com/2015/08/plotting-time-series-in-r.html
-# https://learnxinyminutes.com/docs/r/
 
-setwd("~/GitHub/Quantifying the World/QTW_FinalProject")
 
-#
-# install.packages("frontier")
-# install.packages("PerformanceAnalytics")
-# install.packages("zoo")
-# install.packages("tseries")
-# install.packages("hexbin")
+setwd("~/Google Drive/smu/quantifying/QTW_FinalProject")
 
-library(zoo)
-library(PerformanceAnalytics)
-library(tseries)
-library(quantmod)
-library(hexbin)
-library(frontier)
 library(ggplot2)
 
 
@@ -78,7 +59,7 @@ nflxr <- dailyRets(nflx)
 twtrr <- dailyRets(twtr)
 amznr <- dailyRets(amzn)
 nvdar <- dailyRets(nvda)
-retDate <- Dates[2:len(Dates)]
+retDate <- Dates[2:length(Dates)]
 dfr <- data.frame(retDate, fbr, nflxr, twtrr, amznr, nvdar)
 
 ggplot(dfr, aes(retDate)) +
@@ -96,61 +77,69 @@ ggplot(dfr, aes(retDate)) +
   ylab("")
 
 
-# Time to work on the Sharpe Ratio
-#PerformanceAnalytics Package has this built in. Not 100% sure on how to handle it.
-SharpeRatio(nflxr, Rf=0.95, scale = 252, VaR = 1)
+# Below is work reproduced from https://rviews.rstudio.com/2016/11/09/reproducible-finance-with-r-the-sharpe-ratio/
+# and modified for our stock grouping.
+library(PerformanceAnalytics)
+library(quantmod)
+library(dygraphs)
 
-SharpeRatio.annualized(fbr)
-x <- SharpeRatio(fbr, Rf = 0)
-x
+monthly_stock_returns <- function(ticker, start_year) {
+  # Download the data from Yahoo finance
+  symbol <- getSymbols(ticker, src = 'yahoo', auto.assign = FALSE, warnings = FALSE)
+  # Tranform it to monthly returns using the periodReturn function from quantmod
+  data <- periodReturn(symbol, period = 'monthly', subset=paste(start_year, "::", sep = ""),
+                       type = 'log')
 
-SharpeRatio(dfr[,2:6], Rf = dfr[,2,drop=FALSE]) # Still working with this one. Not sure where to take it.
+  # Let's rename the column of returns to something intuitive because the column name is what
+  # will eventually be displayed on the time series graph.
+  colnames(data) <- as.character(ticker)
 
-#
-# Everything below this line is a WIP. It may not be needed
-#
-
-# Let's move onto how they do everything in Python for Data Analysis. (This is failing spectacularly)
-
-pctchange <- function(val){
-  return(val/lag(val,-1) - 1)
+  # We want to be able to work with the xts objects that result from this function
+  # so let's explicitly put them to the global environment with an easy to use
+  # name, the stock ticker.
+  assign(ticker, data, .GlobalEnv)
 }
 
-lag <- 1
+year = 2016
+monthly_stock_returns('FB', year)
+monthly_stock_returns('NFLX', year)
+monthly_stock_returns('TWTR', year)
+monthly_stock_returns('AMZN', year)
+monthly_stock_returns('NVDA', year)
 
-calc_mom <- function(price, lookback, lag){
-  mom_ret <- shift(price, n = 1)
-  mom_ret <- mom_ret.pctchange(lookback)
-  ranks <- mom_ret.rank(axis = 1, ascending = FALSE)
-  demeaned <- ranks.subtract(ranks.mean(axis = 1))
-  return(demeaned.divide(demeaned.std(axis=1), axis = 0))
-}
+merged_returns <- merge.xts(FB, NFLX, TWTR, AMZN, NVDA)
 
-compound <- function(x){
-  return(prod(1+x) - 1)
-}
+dygraph(merged_returns, main = "Facebook v Netflix v Twitter v Amazon v NVidia") %>%
+  dyAxis("y", label = "% Change") %>%
+  dyOptions(colors = RColorBrewer::brewer.pal(5, "Set2"))
 
-daily_sr <- function(x){
-  return(mean(x)/stdDev(x))
-}
+# We have the 5 monthly returns saved in 1 object.
+# Now, let's choose the respective weights of those 5.
+w <- c(.2, .2, .2, .2, .2)
+# Now use the built in PerformanceAnalytics function Return.portfolio
+# to calculate the monthly returns on the portfolio, supplying the vector of weights 'w'.
+portfolio_monthly_returns <- Return.portfolio(merged_returns, weights = w)
 
-strat_sr <- function(prices, lb, hold){
-  # Compute the portfolio weights
-  freq <- as.integer("%d") %% hold
-  port <- calc_mom(prices, lb)
-  daily_rets <- pctchange(prices)
+# Use dygraphs to chart the portfolio monthly returns.
+dygraph(portfolio_monthly_returns, main = "Portfolio Monthly Return") %>%
+  dyAxis("y", label = "%")
 
-  # Compute the portfolio returns
-  port <- port.shift(1)
-  port <- port.resample(freq)
-  port <- first(port)
+# Add the wealth.index = TRUE argument and, instead of returning monthly returns,
+# the function will return the growth of $1 invested in the portfolio.
+dollar_growth <- Return.portfolio(merged_returns, weights = w, wealth.index = TRUE)
 
-  returns <- daily_rets.resample(freq)
-  returns <- returns.apply(compound)
+# Use dygraphs to chart the growth of $1 in the portfolio.
+dygraph(dollar_growth, main = "Growth of $1 Invested in Portfolio") %>%
+  dyAxis("y", label = "$")
 
-  port_rets <- sum(port * returns,axis=1)
+# the Sharpe Ratio measures excess returns per unit of volatility, where we take the
+# standard deviation to represent portfolio volatility. The Sharpe Ratio was brought
+# to us by Bill Sharpe - arguably the most important economist for modern investment
+# management as the creator of the Sharpe Ratio, CAPM and Financial Engines, a forerunner
+# of today’s robo-advisor movement.
 
-  return(daily_sr(port_rets) * sqrt(252 / hold))
-}
+# using a risk-free rate of 0.03% which is mean of 1-month T bill
+sharpe_ratio <- round(SharpeRatio(portfolio_monthly_returns, Rf = .0003), 4)
 
-strat_sr(fbc, 70, 30)
+# result
+sharpe_ratio[1,]
