@@ -1,4 +1,4 @@
-# Libraries needed:  for getting the ticker data. 
+# Libraries needed: 
 # frontier for the analysis, 
 # Let's use Hexbin for the heatmap
 
@@ -78,8 +78,11 @@ twtrr <- dailyRets(twtr)
 amznr <- dailyRets(amzn)
 nvdar <- dailyRets(nvda)
 retDate <- Dates[2:len(Dates)]
+
+# Add the returns to a data frame
 dfr <- data.frame(retDate, fbr, nflxr, twtrr, amznr, nvdar)
 
+# plot it
 ggplot(dfr, aes(retDate)) +
   geom_line(aes(y=fbr, color = "fb")) +
   geom_line(aes(y=nflxr, color = "nflx")) +
@@ -105,9 +108,9 @@ x
 
 SharpeRatio(dfr[,2:6], Rf = dfr[,2,drop=FALSE]) # Still working with this one. Not sure where to take it.
 
-#
-# Everything below this line is a WIP. It may not be needed
-# 
+#############################################################
+# Everything below this line is a WIP. It may not be needed #
+#############################################################
 
 # Let's move onto how they do everything in Python for Data Analysis. (This is failing spectacularly)
 
